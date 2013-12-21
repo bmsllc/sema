@@ -4,7 +4,10 @@
 // accquire and release named semaphore for program synchronation
 //	Questions...
 /*
-:! g++ -g -o sema -pthread %
+:! flex alex.l
+:! gcc -c -g -o lex.yy.o lex.yy.c
+:! g++ -c -o sema % 
+:! g++ -g -o sema -pthread % lex.yy.o  -lfl
 */
 
 
@@ -43,6 +46,13 @@ using namespace std;
 
 void dummy( void  );
 void usage( void );
+void parseCommand( void );
+
+char * lexString = NULL;
+
+string	str;
+char *	args[ 20 ];		// 20 max args
+
 
 // foutput to stdout unless a filename is given;
 FILE *	fout = NULL;
@@ -58,7 +68,7 @@ int		nsems;
 int		semid;
 bool	nomore = false;
 
-int		verbose = 0;
+int		verbose = 4;
 #define	VERBOSE 	1
 #define	PROLOGUE	2
 #define	DEBUG 		4	// not used...
@@ -81,8 +91,11 @@ main( int argc, char * argv[] )
 
 	memset( fn, 0, PATH_MAX );
 	pgm = argv[ 0 ];
+
 	while((ch = getopt(argc,argv, OPTION_STRING )) != -1) {
+		if( verbose ) { cout << "ch : " << ch << "\n"; }
 		switch( ch ) {
+
       default:	//  '?' usually
         //fprintf(stderr, "%s: invalid option -%c\n\n", pgm, ch);
 		opterr = 1;
@@ -101,10 +114,12 @@ main( int argc, char * argv[] )
 		break;
 
       case 'c': // command line
+		if( verbose ) { cout << "c : " << optarg << "\n"; }
           command = optarg;				// save command line
         break;
 
       case 'n': // semaphore name
+		if( verbose ) { cout << "n : " << optarg << "\n"; }
           name = optarg;				// semaphore name
         break;
 
@@ -117,6 +132,11 @@ main( int argc, char * argv[] )
         break;
 		}
 	}
+
+if( verbose ) { cout << "after getopt " << "\n"; }
+if( name == NULL ) {
+cout << "no semaphore name after getopt " << "\n";
+}
 
 	// always need the actual semaphore
 	sem_t *	semID = sem_open(  name, O_CREAT | O_RDWR,  S_IRWXU | S_IRWXU | S_IRWXO, 1 );
@@ -131,7 +151,8 @@ main( int argc, char * argv[] )
 		int	status = 0;
 		int	endingStatus = 0;
 		pid_t newP = (pid_t) NULL;
-		string	str = command;
+		lexString = command;
+		parseCommand();
 
 		sem_wait( semID );
 		cout << pid << ": got it!" << "\n";
@@ -212,5 +233,37 @@ errorExit( int e ) {
 		fclose(fout );
 	}
 }
+
+
+// setup lexer and do the command line
+
+extern "C" int	yylex( void );
+extern "C" char *	yytext;
+
+void
+parseCommand( void ) {
+int	val;
+int	arg = 0;
+
+	lexString = command;
+	while( val = yylex() ) {
+		cout << val << yytext << "\n";
+		if( arg == 0 ) {
+			cout << "Pgm is " << yytext << "\n";
+		}
+	}
+}
+
+
+extern "C" {
+
+void
+errorLexer( ) {
+	cerr << "Lex error - prob too few chars returned." << "\nl";
+	exit( -1 );
+}
+
+}
+
 
 
