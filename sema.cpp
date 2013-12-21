@@ -68,7 +68,7 @@ int		nsems;
 int		semid;
 bool	nomore = false;
 
-int		verbose = 4;
+int		verbose = 0;
 #define	VERBOSE 	1
 #define	PROLOGUE	2
 #define	DEBUG 		4	// not used...
@@ -165,7 +165,7 @@ cout << "no semaphore name after getopt " << "\n";
 			exit( -1 );
 		} else if( newP == 0 ) {	// child
 			// exec the command line...
-			cout << "The cmd: " << str << "\n";
+			cout << "The cmd: " << command << "\n";
 			exit(0);
 		} else {	// parent
 			pid_t p = wait( & status );			// wait for the kid to finish, report ending status
@@ -247,11 +247,16 @@ int	arg = 0;
 
 	lexString = command;
 	while( val = yylex() ) {
-		cout << val << yytext << "\n";
+		cout << "val is " << val << " yytext is " << yytext << "\n";
 		if( arg == 0 ) {
 			cout << "Pgm is " << yytext << "\n";
 		}
+		int len = strlen( yytext );
+		args[ arg ] = (char*) malloc( len );
+		strncpy( args[ arg ], yytext, len );
+		arg++;
 	}
+	args[ arg ] = NULL;
 }
 
 

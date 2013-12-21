@@ -7,6 +7,13 @@
 #define	NUMBER		304
 
 
+#include <stdio.h>
+#include <unistd.h>
+#include <limits.h>
+
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
 #undef YY_INPUT
 
 extern char * lexString;
@@ -17,7 +24,7 @@ extern void		errorLexer( void );
 int myInput( char * buf, int max_size ) {
 
 	int	l = strlen( lexString );
-	int	n = min( max_size, l );
+	int	n = MIN( max_size, l );
 
 	if( n > 0 ) {
 		memcpy( buf, lexString, n );
