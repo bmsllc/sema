@@ -54,7 +54,7 @@ int myInput( char * buf, int max_size ) {
 -[a-zA-Z0-9]+				{ return SOPTION;	}
 \".*\"			{ return QSTRING;	}
 [0-9]+			{ return NUMBER;	}
-[a-zA-z0-9_]+	{ return STRING;	}
+[-a-zA-z0-9_/\.\?]+	{ return STRING;	}
 
 %%
 

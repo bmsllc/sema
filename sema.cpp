@@ -1,4 +1,3 @@
-
 //
 // sema - semaphore program
 // accquire and release named semaphore for program synchronation
@@ -30,7 +29,7 @@ using namespace std;
 
 #define	PGM_NAME		"Sema"
 #define	PGM_VERSION		"1.0"
-#define	OPTION_STRING	"?Bc:n:uv"
+#define	OPTION_STRING	"?Bc:d:n:uv"
 #define	PATH_MAX		200
 
 // command line parameters...
@@ -70,6 +69,7 @@ int		semflg;
 int		nsems;
 int		semid;
 bool	nomore = false;
+long	theDelay = 0;
 
 int		verbose = 0;
 #define	VERBOSE 	1
@@ -121,6 +121,10 @@ main( int argc, char * argv[] )
           command = optarg;				// save command line
         break;
 
+      case 'd': // optional delay amount
+        theDelay = atoi( optarg );		// optional delay amount
+        break;
+
       case 'n': // semaphore name
 		if( verbose ) { cout << "n : " << optarg << "\n"; }
           name = optarg;				// semaphore name
@@ -153,12 +157,12 @@ if( verbose ) { cout << "after getopt " << "\n"; }
 	strcpy( devsem, "/dev/shm/sem." );
 	strcat( devsem, name );
 
-	cout << "Opening the semaphore: " << name << endl;
+	if( verbose ) { cout << "Opening the semaphore: " << name << endl; }
 	if ( stat( devsem, &sb) == -1) {
-		cout << "creating..." << endl;
+		if( verbose ) { cout << "creating..." << endl; }
 		semID = sem_open(  name, oflag,  mode, 1 );		// create the semaphore
     } else {
-		cout << "opening..." << endl;
+		if( verbose ) { cout << "opening..." << endl; }
 		oflag = O_RDWR;
 		semID = sem_open(  name, oflag );				// do not create the semaphore
 	}
@@ -169,10 +173,10 @@ if( verbose ) { cout << "after getopt " << "\n"; }
 		perror( "sema_open" );
 		exit( -1 );
 	}
-	cerr << "Sem open: " << name << ", oflag: " << hex  << oflag  << ", mode: 0" << oct << mode << dec << endl ;
+	if( verbose ) { cerr << "Sem open: " << name << ", oflag: " << hex  << oflag  << ", mode: 0" << oct << mode << dec << endl ; }
 	int	semvalue;
 	int sv = sem_getvalue( semID, &semvalue);
-	cout << pid << ": sv is: " << sv << ", semvalue is " << semvalue << endl ;
+	if( verbose ) { cout << pid << ": sv is: " << sv << ", semvalue is " << semvalue << endl ; }
 
 	if( command != NULL ) {		// execute the command
 		int	status = 0;
@@ -182,9 +186,9 @@ if( verbose ) { cout << "after getopt " << "\n"; }
 		parseCommand();
 
 		int src = sem_wait( semID );		// wait for semaphore
-		cout << pid << ": src is: " << src << endl ;
+		if( verbose ) { cout << pid << ": src is: " << src << endl ; }
 		sv = sem_getvalue( semID, &semvalue);
-		cout << pid << ": sv is: " << sv << ", semvalue is " << semvalue << endl ;
+		if( verbose ) { cout << pid << ": sv is: " << sv << ", semvalue is " << semvalue << endl ; }
 
 		newP = fork();					// fork new process, parent waits for completion
 		if( newP < 0 ) {	// error
@@ -205,19 +209,23 @@ if( verbose ) { cout << "after getopt " << "\n"; }
 			//for( int jj=0; args[jj] != NULL; jj++ )
 				//cout << jj << " : " << args[jj] << endl;
 
-			execv( thePgm, args );
-			cerr << "execv failed: " << errno << endl;
-			perror( "execv failed... " );
+			if( verbose ) { cout << "In child..." << endl; }
+			execvp( thePgm, args );
+			cerr << "execvp failed: " << errno << endl;
+			perror( "execvp failed... " );
 			exit( -1 );
 		} else {	// in the parent
 			// SAME PROCESS..., need to wait for kid to terminate
+			if( verbose ) { cout << "waiting for the kid...." << endl; }
 			pid_t p = wait( & status );			// wait for the kid to finish, report ending status
 			if( p == newP ) {					// status is for the child
+				if( verbose ) { cout << "done wait..." << endl; }
 				if( status == 0 ) {					// normal (expected ) return
+					if( verbose ) { cout << "status normal..." << endl; }
 				} else {							// some status returned.
 					int	exitVal = WIFEXITED( status );	// basic exit status
 					if( exitVal != 0 ) {
-					rc = WEXITSTATUS( status );		// exit status from child
+						rc = WEXITSTATUS( status );		// exit status from child
 					}
 				}
 			} else {							// not expected to happen
@@ -225,12 +233,24 @@ if( verbose ) { cout << "after getopt " << "\n"; }
 			}
 		}
 
+		sync();
+
+		if( theDelay != 0 ) {
+			if( verbose ) { cout << "delay...." << endl; }
+			int err = usleep( theDelay );
+			if( err != 0 ) {
+				cerr << "Interrupted sleep !!" << endl;
+			}
+		}
+
 		sem_post( semID );		// only the parent releases the semaphore
-		cout << "Posting the semaphore: " << name << endl;
+		if( verbose ) { cout << "Posting the semaphore: " << name << endl;  }
+	} else {
+		if( verbose ) { cout << "No command !" << endl; }
 	}
 
 	if( nomore == true ) {		// remove semaphore
-		cout << "Removing the semaphore: " << name << endl;
+		if( verbose ) { cout << "Removing the semaphore: " << name << endl; }
 		int urc = sem_unlink( name );
 		if( urc < 0 ) {
 			cerr << "Could not unlink the " << name << " semaphore." << "\n";
@@ -239,7 +259,7 @@ if( verbose ) { cout << "after getopt " << "\n"; }
 	}
 
 	sem_close( semID );
-	cout << "Closing the semaphore: " << name << endl;
+	if( verbose ) { cout << "Closing the semaphore: " << name << endl; }
 	return rc;	// could be from us or the kid if we ran a command
 }
 
@@ -255,6 +275,7 @@ usage() {
 	fprintf( stderr, "\t%s - %s\n", "?", "Ask for help." );
 	fprintf( stderr, "\t%s - %s\n", "B","Put dummy command line in clipboard, for pasting....");
 	fprintf( stderr, "\t%s - %s\n", "c","command to run." );
+	fprintf( stderr, "\t%s - %s\n", "d","Optional uSleep amount." );
 	fprintf( stderr, "\t%s - %s\n", "n","Job name." );
 	fprintf( stderr, "\t%s - %s\n", "u","unlink semaphone (name)." );
 	fprintf( stderr, "\t%s - %s\n", "v","Be verbose." );
@@ -296,7 +317,7 @@ int	arg = 0;
 
 	lexString = command;
 	while( val = yylex() ) {
-		//cout << "val is " << val << " yytext is " << yytext << "\n";
+		if( verbose ) { cout << "val is " << val << " yytext is " << yytext << "\n"; }
 		if( arg == 0 ) {			// first arg is the name of the program
 			//cout << "Pgm is " << yytext << "\n";
 			strncpy( thePath, yytext, PATH_MAX );
@@ -304,6 +325,7 @@ int	arg = 0;
 		}
 		int len = strlen( yytext );
 		args[ arg ] = (char*) malloc( len + 1 );
+		memset( args[ arg ], 0, len+1 );
 		strncpy( args[ arg ], yytext, len );
 		arg++;
 	}
