@@ -1,0 +1,17 @@
+
+badpuppy:~/src$ ./semaopen -n test
+Stat on the semaphore: /dev/shm/sem.test
+will be creating...
+505: sv is: 0, semvalue is 0x1
+Hit enter to end this program....
+
+Bill@sanet-home:~/.../sema$ ./semaopen -n test
+will be creating...
+3880: sv is: 1, semvalue is 0x0
+Hit enter to end this program....
+Reply:
+Closing the semaphore: /dev/shm/sem.test rc: 0
+
+
+
+
